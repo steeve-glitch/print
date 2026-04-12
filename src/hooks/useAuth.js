@@ -5,7 +5,7 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged,
 } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
 export function useAuth() {
@@ -14,6 +14,7 @@ export function useAuth() {
   const [role, setRole] = useState(null)
   const [userName, setUserName] = useState('')
   const [department, setDepartment] = useState(null)
+  const [needsSetup, setNeedsSetup] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -26,21 +27,25 @@ export function useAuth() {
             setRole(data.role || null)
             setUserName(data.name || firebaseUser.displayName || '')
             setDepartment(data.department || null)
+            setNeedsSetup(!data.role)
           } else {
             setRole(null)
             setUserName(firebaseUser.displayName || '')
             setDepartment(null)
+            setNeedsSetup(true)
           }
         } catch (err) {
           console.error('Error fetching user role:', err)
           setRole(null)
           setDepartment(null)
+          setNeedsSetup(false)
         }
       } else {
         setUser(null)
         setRole(null)
         setUserName('')
         setDepartment(null)
+        setNeedsSetup(false)
       }
     })
     return unsubscribe
@@ -55,13 +60,28 @@ export function useAuth() {
     await fbSignOut(auth)
   }
 
+  const setupAccount = async ({ name, role: newRole, department: newDept }) => {
+    await setDoc(doc(db, 'users', user.uid), {
+      name,
+      role: newRole,
+      department: newDept,
+      createdAt: serverTimestamp(),
+    }, { merge: true })
+    setRole(newRole)
+    setUserName(name)
+    setDepartment(newDept)
+    setNeedsSetup(false)
+  }
+
   return {
     user,
     role,
     userName,
     department,
+    needsSetup,
     loading: user === undefined,
     signIn,
     signOut,
+    setupAccount,
   }
 }

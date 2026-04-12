@@ -27,10 +27,20 @@ service cloud.firestore {
 
     // ── users/{uid} ────────────────────────────────────────────────────────
     // Users may read their own doc (for role/dept lookup).
-    // Only admins can write user docs.
+    // New users may create their own doc (self-registration), but only with
+    // non-admin roles. Admins handle updates/deletes.
     match /users/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
-      allow write: if isSignedIn() && isAdmin();
+      allow create: if isSignedIn()
+                    && request.auth.uid == uid
+                    && request.resource.data.role in ['teacher', 'hod', 'printer'];
+      // Allow completing setup when doc exists but has no role yet
+      allow update: if isSignedIn()
+                    && request.auth.uid == uid
+                    && resource.data.get('role', null) == null
+                    && request.resource.data.role in ['teacher', 'hod', 'printer'];
+      allow delete: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && isAdmin();
     }
 
     // ── printRequests/{docId} ──────────────────────────────────────────────
