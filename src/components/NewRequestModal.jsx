@@ -45,7 +45,10 @@ export default function NewRequestModal({ onSubmit, onClose, defaultDepartment }
       if (mode === 'upload' && file) {
         const uid = auth.currentUser?.uid ?? 'unknown'
         const storageRef = ref(storage, `uploads/${uid}/${Date.now()}_${file.name}`)
-        await uploadBytes(storageRef, file)
+        const timeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Upload timed out — Firebase Storage may not be enabled on this project.')), 15000)
+        )
+        await Promise.race([uploadBytes(storageRef, file), timeout])
         docUrl = await getDownloadURL(storageRef)
       }
       await onSubmit({ ...form, copies: parseInt(form.copies, 10), googleDriveLink: docUrl })
