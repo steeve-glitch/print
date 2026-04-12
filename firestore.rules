@@ -51,7 +51,7 @@ service cloud.firestore {
       // get() calls in list rules are unreliable in Firestore — keep reads simple.
       allow read: if isSignedIn();
 
-      allow create: if isSignedIn() && isTeacher()
+      allow create: if isSignedIn() && (isTeacher() || isHod())
                     && request.resource.data.requesterId == request.auth.uid
                     && request.resource.data.status == 'pending_hod'
                     && request.resource.data.keys().hasAll([
@@ -61,8 +61,8 @@ service cloud.firestore {
                          'hodComment','printerNotes'
                        ]);
 
-      // Teachers: mark their own ready request as collected
-      allow update: if isSignedIn() && isTeacher()
+      // Teachers/HODs: mark their own ready request as collected
+      allow update: if isSignedIn() && (isTeacher() || isHod())
                     && resource.data.requesterId == request.auth.uid
                     && resource.data.status == 'ready'
                     && request.resource.data.status == 'collected'

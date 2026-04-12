@@ -56,6 +56,7 @@ const en = {
   department: 'Department',
 
   // HOD dashboard
+  myRequestsTab: 'My Requests',
   hodTitle: 'Approval Queue',
   hodSubtitle: 'Review pending print requests.',
   pendingTab: 'Pending',
@@ -172,6 +173,7 @@ const es = {
   actions: 'Acciones',
   department: 'Departamento',
 
+  myRequestsTab: 'Mis Solicitudes',
   hodTitle: 'Cola de Aprobación',
   hodSubtitle: 'Revisa las solicitudes de impresión pendientes.',
   pendingTab: 'Pendientes',
