@@ -54,7 +54,7 @@ service cloud.firestore {
                     && request.resource.data.requesterId == request.auth.uid
                     && request.resource.data.status == 'pending_hod'
                     && request.resource.data.keys().hasAll([
-                         'documentName','googleDriveLink','copies','color',
+                         'documentName','googleDriveLink','copies','color','size',
                          'doubleSided','neededBy','department','requesterId',
                          'requesterName','requesterEmail','status','createdAt',
                          'hodComment','printerNotes'

@@ -18,6 +18,7 @@ export default function NewRequestModal({ onSubmit, onClose, defaultDepartment }
     googleDriveLink: '',
     copies: 1,
     color: false,
+    size: 'A4',
     doubleSided: false,
     neededBy: '',
     department: defaultDepartment || '',
@@ -225,34 +226,26 @@ export default function NewRequestModal({ onSubmit, onClose, defaultDepartment }
             </div>
           </div>
 
-          {/* Color toggle */}
+          {/* Paper size */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t.colorLabel}
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {t.sizeLabel}
             </label>
             <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, color: true }))}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                  form.color
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {t.colorOption}
-              </button>
-              <button
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, color: false }))}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                  !form.color
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {t.bwOption}
-              </button>
+              {['A4', 'Letter', 'Office'].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, size: s }))}
+                  className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                    form.size === s
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
 

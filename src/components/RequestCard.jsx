@@ -31,7 +31,7 @@ export default function RequestCard({ req, showActions, onApprove, onReject }) {
         <span>
           {req.copies} {t.copies}
         </span>
-        <span>{req.color ? t.colorPrint : t.bwPrint}</span>
+        {req.size && <span>{req.size}</span>}
         <span>{req.doubleSided ? t.doubleSided : t.singleSided}</span>
         <span className="flex items-center gap-1">
           <Clock size={13} />
