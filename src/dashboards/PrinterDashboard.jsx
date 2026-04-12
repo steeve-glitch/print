@@ -102,15 +102,11 @@ export default function PrinterDashboard({ user }) {
                   <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-sm font-medium">
                     {req.copies}×
                   </span>
-                  <span
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
-                      req.color
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {req.color ? t.colorPrint : t.bwPrint}
-                  </span>
+                  {req.size && (
+                    <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-xs font-medium">
+                      {req.size}
+                    </span>
+                  )}
                   <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-xs font-medium">
                     {req.doubleSided ? t.doubleSided : t.singleSided}
                   </span>

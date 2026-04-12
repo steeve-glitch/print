@@ -37,7 +37,7 @@ const en = {
   statusPendingHod: 'Pending HOD',
   statusApproved: 'Approved',
   statusRejected: 'Rejected',
-  statusPrinting: 'Printing',
+  statusPrinting: 'Received',
   statusReady: 'Ready for Pickup',
   statusCollected: 'Collected',
 
@@ -75,8 +75,8 @@ const en = {
   // Printer dashboard
   printerTitle: 'Print Queue',
   printerSubtitle: 'Approved requests waiting to be printed.',
-  startPrinting: 'Start Printing',
-  markReady: 'Mark Ready',
+  startPrinting: 'Mark as Received',
+  markReady: 'Mark as Ready for Pickup',
   noQueue: 'No requests in the queue.',
   colorPrint: 'Color',
   bwPrint: 'B&W',
@@ -156,7 +156,7 @@ const es = {
   statusPendingHod: 'Pendiente JD',
   statusApproved: 'Aprobado',
   statusRejected: 'Rechazado',
-  statusPrinting: 'Imprimiendo',
+  statusPrinting: 'Recibido',
   statusReady: 'Listo para Recoger',
   statusCollected: 'Recogido',
 
@@ -191,8 +191,8 @@ const es = {
 
   printerTitle: 'Cola de Impresión',
   printerSubtitle: 'Solicitudes aprobadas esperando impresión.',
-  startPrinting: 'Iniciar Impresión',
-  markReady: 'Marcar Listo',
+  startPrinting: 'Marcar como Recibido',
+  markReady: 'Marcar Listo para Recoger',
   noQueue: 'No hay solicitudes en la cola.',
   colorPrint: 'Color',
   bwPrint: 'B/N',
