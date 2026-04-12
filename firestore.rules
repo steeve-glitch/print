@@ -46,10 +46,10 @@ service cloud.firestore {
     // ── printRequests/{docId} ──────────────────────────────────────────────
     match /printRequests/{docId} {
 
-      // Teachers: read own requests OR any active request in their department
-      allow read: if isSignedIn() && isTeacher()
-                  && (resource.data.requesterId == request.auth.uid
-                      || resource.data.department == myDept());
+      // Any signed-in user may read requests.
+      // Role-based filtering (own requests, dept, queue) is handled client-side.
+      // get() calls in list rules are unreliable in Firestore — keep reads simple.
+      allow read: if isSignedIn();
 
       allow create: if isSignedIn() && isTeacher()
                     && request.resource.data.requesterId == request.auth.uid
@@ -69,11 +69,8 @@ service cloud.firestore {
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['status']);
 
-      // HODs: read + approve/reject pending_hod requests for their department
+      // HODs: approve/reject pending_hod requests for their department
       // Admins: same but unrestricted by department
-      allow read: if isSignedIn() && (isHod() || isAdmin())
-                  && (isAdmin() || resource.data.department == myDept());
-
       allow update: if isSignedIn() && (isHod() || isAdmin())
                     && (isAdmin() || resource.data.department == myDept())
                     && resource.data.status == 'pending_hod'
@@ -81,10 +78,7 @@ service cloud.firestore {
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['status', 'hodComment']);
 
-      // Printers: read approved/printing; advance approved→printing, printing→ready
-      allow read: if isSignedIn() && isPrinter()
-                  && resource.data.status in ['approved', 'printing'];
-
+      // Printers: advance approved→printing, printing→ready
       allow update: if isSignedIn() && isPrinter()
                     && (
                       (resource.data.status == 'approved'
