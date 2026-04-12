@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function myRole() {
+      return userDoc().role;
+    }
+
+    function myDept() {
+      return userDoc().get('department', null);
+    }
+
+    function isAdmin()   { return myRole() == 'admin'; }
+    function isHod()     { return myRole() == 'hod'; }
+    function isPrinter() { return myRole() == 'printer'; }
+    function isTeacher() { return myRole() == 'teacher'; }
+
+    // ── users/{uid} ────────────────────────────────────────────────────────
+    // Users may read their own doc (for role/dept lookup).
+    // Only admins can write user docs.
+    match /users/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if isSignedIn() && isAdmin();
+    }
+
+    // ── printRequests/{docId} ──────────────────────────────────────────────
+    match /printRequests/{docId} {
+
+      // Teachers: read own requests; create new requests
+      allow read: if isSignedIn() && isTeacher()
+                  && resource.data.requesterId == request.auth.uid;
+
+      allow create: if isSignedIn() && isTeacher()
+                    && request.resource.data.requesterId == request.auth.uid
+                    && request.resource.data.status == 'pending_hod'
+                    && request.resource.data.keys().hasAll([
+                         'documentName','googleDriveLink','copies','color',
+                         'doubleSided','neededBy','department','requesterId',
+                         'requesterName','requesterEmail','status','createdAt',
+                         'hodComment','printerNotes'
+                       ]);
+
+      // Teachers: mark their own ready request as collected
+      allow update: if isSignedIn() && isTeacher()
+                    && resource.data.requesterId == request.auth.uid
+                    && resource.data.status == 'ready'
+                    && request.resource.data.status == 'collected'
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status']);
+
+      // HODs: read + approve/reject pending_hod requests for their department
+      // Admins: same but unrestricted by department
+      allow read: if isSignedIn() && (isHod() || isAdmin())
+                  && (isAdmin() || resource.data.department == myDept());
+
+      allow update: if isSignedIn() && (isHod() || isAdmin())
+                    && (isAdmin() || resource.data.department == myDept())
+                    && resource.data.status == 'pending_hod'
+                    && request.resource.data.status in ['approved', 'rejected']
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'hodComment']);
+
+      // Printers: read approved/printing; advance approved→printing, printing→ready
+      allow read: if isSignedIn() && isPrinter()
+                  && resource.data.status in ['approved', 'printing'];
+
+      allow update: if isSignedIn() && isPrinter()
+                    && (
+                      (resource.data.status == 'approved'
+                        && request.resource.data.status == 'printing')
+                      ||
+                      (resource.data.status == 'printing'
+                        && request.resource.data.status == 'ready')
+                    )
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status']);
+    }
+  }
+}
