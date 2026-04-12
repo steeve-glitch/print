@@ -45,6 +45,7 @@ export function useRequests(user) {
       googleDriveLink: data.googleDriveLink,
       copies: data.copies,
       color: data.color,
+      size: data.size,
       doubleSided: data.doubleSided,
       neededBy: data.neededBy,
       department: data.department,

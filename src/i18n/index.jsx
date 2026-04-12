@@ -107,6 +107,11 @@ const en = {
   submitRequest: 'Submit Request',
   submitting: 'Submitting...',
 
+  // Department activity
+  deptActivityTitle: 'Department Activity',
+  deptActivitySubtitle: 'Active requests from your colleagues — check before submitting duplicates.',
+  noDeptActivity: 'No other active requests in your department.',
+
   // Toast messages
   toastSubmitted: 'Request submitted for HOD approval.',
   toastApproved: 'Request approved.',
@@ -215,6 +220,11 @@ const es = {
   selectDepartmentPlaceholder: 'Seleccionar departamento',
   submitRequest: 'Enviar Solicitud',
   submitting: 'Enviando...',
+
+  // Department activity
+  deptActivityTitle: 'Actividad del Departamento',
+  deptActivitySubtitle: 'Solicitudes activas de tus colegas — verifica antes de enviar duplicados.',
+  noDeptActivity: 'No hay otras solicitudes activas en tu departamento.',
 
   toastSubmitted: 'Solicitud enviada para aprobación del JD.',
   toastApproved: 'Solicitud aprobada.',

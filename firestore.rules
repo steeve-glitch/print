@@ -46,9 +46,10 @@ service cloud.firestore {
     // ── printRequests/{docId} ──────────────────────────────────────────────
     match /printRequests/{docId} {
 
-      // Teachers: read own requests; create new requests
+      // Teachers: read own requests OR any active request in their department
       allow read: if isSignedIn() && isTeacher()
-                  && resource.data.requesterId == request.auth.uid;
+                  && (resource.data.requesterId == request.auth.uid
+                      || resource.data.department == myDept());
 
       allow create: if isSignedIn() && isTeacher()
                     && request.resource.data.requesterId == request.auth.uid
