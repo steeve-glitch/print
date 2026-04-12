@@ -1,11 +1,18 @@
-import { useState } from 'react'
-import { X } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { X, UploadCloud, FileText } from 'lucide-react'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { useT } from '../i18n'
 import { DEPARTMENTS } from '../constants'
+import { storage, auth } from '../firebase'
 
-export default function NewRequestModal({ onSubmit, onClose }) {
+export default function NewRequestModal({ onSubmit, onClose, defaultDepartment }) {
   const { t } = useT()
   const [submitting, setSubmitting] = useState(false)
+  const [mode, setMode] = useState('link') // 'link' | 'upload'
+  const [file, setFile] = useState(null)
+  const [dragging, setDragging] = useState(false)
+  const fileInputRef = useRef(null)
+
   const [form, setForm] = useState({
     documentName: '',
     googleDriveLink: '',
@@ -13,17 +20,35 @@ export default function NewRequestModal({ onSubmit, onClose }) {
     color: false,
     doubleSided: false,
     neededBy: '',
-    department: '',
+    department: defaultDepartment || '',
   })
 
   const set = (key) => (e) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }))
 
+  const pickFile = (f) => {
+    if (f) setFile(f)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setDragging(false)
+    const f = e.dataTransfer.files[0]
+    if (f) pickFile(f)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
     try {
-      await onSubmit({ ...form, copies: parseInt(form.copies, 10) })
+      let docUrl = form.googleDriveLink
+      if (mode === 'upload' && file) {
+        const uid = auth.currentUser?.uid ?? 'unknown'
+        const storageRef = ref(storage, `uploads/${uid}/${Date.now()}_${file.name}`)
+        await uploadBytes(storageRef, file)
+        docUrl = await getDownloadURL(storageRef)
+      }
+      await onSubmit({ ...form, copies: parseInt(form.copies, 10), googleDriveLink: docUrl })
     } finally {
       setSubmitting(false)
     }
@@ -31,12 +56,16 @@ export default function NewRequestModal({ onSubmit, onClose }) {
 
   const isValid =
     form.documentName.trim() &&
-    form.googleDriveLink.trim() &&
+    (mode === 'link' ? form.googleDriveLink.trim() : !!file) &&
     Number(form.copies) > 0 &&
     form.neededBy &&
     form.department.trim()
 
   const today = new Date().toISOString().split('T')[0]
+
+  const submitLabel = submitting
+    ? (mode === 'upload' && file ? t.uploading : t.submitting)
+    : t.submitRequest
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-40">
@@ -69,19 +98,98 @@ export default function NewRequestModal({ onSubmit, onClose }) {
             />
           </div>
 
-          {/* Google Drive Link */}
+          {/* Document source — tab toggle */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               {t.driveLinkLabel} <span className="text-red-500">*</span>
             </label>
-            <input
-              type="url"
-              value={form.googleDriveLink}
-              onChange={set('googleDriveLink')}
-              placeholder={t.driveLinkPlaceholder}
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
-            />
+
+            {/* Tabs */}
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-3">
+              <button
+                type="button"
+                onClick={() => setMode('link')}
+                className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                  mode === 'link'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                {t.tabDriveLink}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('upload')}
+                className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                  mode === 'upload'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                {t.tabUpload}
+              </button>
+            </div>
+
+            {mode === 'link' ? (
+              <input
+                type="url"
+                value={form.googleDriveLink}
+                onChange={set('googleDriveLink')}
+                placeholder={t.driveLinkPlaceholder}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
+              />
+            ) : (
+              <div>
+                {file ? (
+                  <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2.5 bg-blue-50">
+                    <FileText size={16} className="text-blue-500 shrink-0" />
+                    <span className="text-sm text-gray-700 truncate">
+                      <span className="text-gray-400 mr-1">{t.fileSelected}</span>
+                      {file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFile(null)}
+                      className="ml-auto text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-lg px-4 py-6 text-center cursor-pointer transition-colors ${
+                      dragging
+                        ? 'border-blue-400 bg-blue-50'
+                        : 'border-gray-300 hover:border-blue-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <UploadCloud
+                      size={28}
+                      className={`mx-auto mb-2 ${dragging ? 'text-blue-400' : 'text-gray-300'}`}
+                    />
+                    <p className="text-sm text-gray-500">
+                      {dragging ? t.dropZoneActive : t.dropZoneText}
+                    </p>
+                    {!dragging && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {t.dropZoneOr}{' '}
+                        <span className="text-blue-500 underline">{t.dropZoneBrowse}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => pickFile(e.target.files[0])}
+                />
+              </div>
+            )}
           </div>
 
           {/* Copies + Needed By */}
@@ -199,7 +307,7 @@ export default function NewRequestModal({ onSubmit, onClose }) {
               disabled={!isValid || submitting}
               className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-lg transition-colors text-sm"
             >
-              {submitting ? t.submitting : t.submitRequest}
+              {submitLabel}
             </button>
           </div>
         </form>

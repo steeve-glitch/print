@@ -37,7 +37,7 @@ export default function Login({ onSignIn }) {
       await onSignIn()
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
-        setError(t.toastError)
+        setError(err.code || err.message || t.toastError)
       }
     } finally {
       setLoading(false)

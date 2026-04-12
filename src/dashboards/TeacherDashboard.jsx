@@ -6,7 +6,7 @@ import { useToast } from '../components/Toast'
 import StatusBadge from '../components/StatusBadge'
 import NewRequestModal from '../components/NewRequestModal'
 
-export default function TeacherDashboard({ user, userName }) {
+export default function TeacherDashboard({ user, userName, department }) {
   const { t } = useT()
   const { showToast } = useToast()
   const { requests, loading, createRequest, updateRequest } = useRequests(user)
@@ -170,7 +170,11 @@ export default function TeacherDashboard({ user, userName }) {
       ) : null}
 
       {showModal && (
-        <NewRequestModal onSubmit={handleCreate} onClose={() => setShowModal(false)} />
+        <NewRequestModal
+          onSubmit={handleCreate}
+          onClose={() => setShowModal(false)}
+          defaultDepartment={department}
+        />
       )}
     </div>
   )

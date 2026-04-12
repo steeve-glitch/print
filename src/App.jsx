@@ -4,6 +4,7 @@ import { ToastProvider } from './components/Toast'
 import { useAuth } from './hooks/useAuth'
 import Login from './components/Login'
 import NoAccess from './components/NoAccess'
+import AccountSetup from './components/AccountSetup'
 import Header from './components/Header'
 import TeacherDashboard from './dashboards/TeacherDashboard'
 import HODDashboard from './dashboards/HODDashboard'
@@ -17,7 +18,7 @@ const DASHBOARDS = {
 }
 
 function AppContent() {
-  const { user, role, userName, department, loading, signIn, signOut } = useAuth()
+  const { user, role, userName, department, needsSetup, loading, signIn, signOut, setupAccount } = useAuth()
   const { t } = useT()
 
   if (loading) {
@@ -31,6 +32,10 @@ function AppContent() {
 
   if (!user) {
     return <Login onSignIn={signIn} />
+  }
+
+  if (needsSetup) {
+    return <AccountSetup user={user} onSetup={setupAccount} />
   }
 
   if (!role) {
