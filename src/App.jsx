@@ -18,7 +18,7 @@ const DASHBOARDS = {
 }
 
 function AppContent() {
-  const { user, role, userName, department, needsSetup, loading, signIn, signOut, setupAccount } = useAuth()
+  const { user, role, isAdmin, setRole, userName, department, needsSetup, loading, signIn, signOut, setupAccount } = useAuth()
   const { t } = useT()
 
   if (loading) {
@@ -50,7 +50,14 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={user} role={role} userName={userName} onSignOut={signOut} />
+      <Header 
+        user={user} 
+        role={role} 
+        isAdmin={isAdmin}
+        onRoleChange={setRole}
+        userName={userName} 
+        onSignOut={signOut} 
+      />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <Dashboard user={user} userName={userName} role={role} department={department} />
       </main>

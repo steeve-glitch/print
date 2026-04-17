@@ -8,10 +8,14 @@ const roleConfig = {
   admin: { key: 'roleBadgeAdmin', style: 'bg-orange-100 text-orange-800' },
 }
 
-export default function Header({ user, role, userName, onSignOut }) {
+export default function Header({ user, role, isAdmin, onRoleChange, userName, onSignOut }) {
   const { t, lang, toggleLang } = useT()
   const cfg = roleConfig[role] || { key: null, style: 'bg-gray-100 text-gray-700' }
   const displayName = userName || user?.displayName || user?.email || ''
+
+  const handleRoleChange = (e) => {
+    onRoleChange(e.target.value)
+  }
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
@@ -22,11 +26,24 @@ export default function Header({ user, role, userName, onSignOut }) {
         </div>
 
         <div className="flex items-center gap-2 min-w-0">
-          <span
-            className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${cfg.style}`}
-          >
-            {cfg.key ? t[cfg.key] : role}
-          </span>
+          {isAdmin ? (
+            <select
+              value={role}
+              onChange={handleRoleChange}
+              className={`text-xs font-medium px-2 py-1 rounded-full border-none focus:ring-2 focus:ring-blue-500 cursor-pointer ${cfg.style}`}
+            >
+              <option value="admin">{t.roleBadgeAdmin}</option>
+              <option value="hod">{t.roleBadgeHod}</option>
+              <option value="printer">{t.roleBadgePrinter}</option>
+              <option value="teacher">{t.roleBadgeTeacher}</option>
+            </select>
+          ) : (
+            <span
+              className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${cfg.style}`}
+            >
+              {cfg.key ? t[cfg.key] : role}
+            </span>
+          )}
 
           <span className="text-sm text-gray-600 truncate hidden sm:block max-w-40">
             {displayName}

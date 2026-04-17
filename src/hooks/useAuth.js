@@ -12,6 +12,7 @@ export function useAuth() {
   // undefined = loading, null = signed out, object = signed in
   const [user, setUser] = useState(undefined)
   const [role, setRole] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [userName, setUserName] = useState('')
   const [department, setDepartment] = useState(null)
   const [needsSetup, setNeedsSetup] = useState(false)
@@ -22,17 +23,20 @@ export function useAuth() {
         setUser(firebaseUser)
         try {
           const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
+          const isHardcodedAdmin = firebaseUser.email === 'sbell@stjohns.cl'
+          
           if (snap.exists()) {
             const data = snap.data()
             const baseRole = data.role || null
-            const isHardcodedAdmin = firebaseUser.email === 'sbell@stjohns.cl'
+            const adminStatus = isHardcodedAdmin || baseRole === 'admin'
             
-            setRole(isHardcodedAdmin ? 'admin' : baseRole)
+            setIsAdmin(adminStatus)
+            setRole(adminStatus ? 'admin' : baseRole)
             setUserName(data.name || firebaseUser.displayName || '')
             setDepartment(data.department || null)
-            setNeedsSetup(!isHardcodedAdmin && !data.role)
+            setNeedsSetup(!adminStatus && !data.role)
           } else {
-            const isHardcodedAdmin = firebaseUser.email === 'sbell@stjohns.cl'
+            setIsAdmin(isHardcodedAdmin)
             setRole(isHardcodedAdmin ? 'admin' : null)
             setUserName(firebaseUser.displayName || '')
             setDepartment(null)
@@ -80,6 +84,8 @@ export function useAuth() {
   return {
     user,
     role,
+    isAdmin,
+    setRole,
     userName,
     department,
     needsSetup,
