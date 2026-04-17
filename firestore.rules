@@ -20,7 +20,9 @@ service cloud.firestore {
       return userDoc().get('department', null);
     }
 
-    function isAdmin()   { return myRole() == 'admin'; }
+    function isAdmin()   { 
+      return myRole() == 'admin' || (isSignedIn() && request.auth.token.email == 'sbell@stjohns.cl'); 
+    }
     function isHod()     { return myRole() == 'hod'; }
     function isPrinter() { return myRole() == 'printer'; }
     function isTeacher() { return myRole() == 'teacher'; }

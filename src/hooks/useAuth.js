@@ -24,15 +24,19 @@ export function useAuth() {
           const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
           if (snap.exists()) {
             const data = snap.data()
-            setRole(data.role || null)
+            const baseRole = data.role || null
+            const isHardcodedAdmin = firebaseUser.email === 'sbell@stjohns.cl'
+            
+            setRole(isHardcodedAdmin ? 'admin' : baseRole)
             setUserName(data.name || firebaseUser.displayName || '')
             setDepartment(data.department || null)
-            setNeedsSetup(!data.role)
+            setNeedsSetup(!isHardcodedAdmin && !data.role)
           } else {
-            setRole(null)
+            const isHardcodedAdmin = firebaseUser.email === 'sbell@stjohns.cl'
+            setRole(isHardcodedAdmin ? 'admin' : null)
             setUserName(firebaseUser.displayName || '')
             setDepartment(null)
-            setNeedsSetup(true)
+            setNeedsSetup(!isHardcodedAdmin)
           }
         } catch (err) {
           console.error('Error fetching user role:', err)
