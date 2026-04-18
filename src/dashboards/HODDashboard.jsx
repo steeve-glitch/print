@@ -19,11 +19,27 @@ const toMs = (ts) => {
 export default function HODDashboard({ user, userName, role, department }) {
   const { t } = useT()
   const { showToast } = useToast()
-  const { requests, loading, createRequest, updateRequest, bulkUpdate } = useRequests(user)
+  const { requests, loading, createRequest, updateRequest, bulkUpdate, deleteRequest } = useRequests(user)
   const [tab, setTab] = useState('pending')
   const [showModal, setShowModal] = useState(false)
-  
-  // Multi-select state
+  const [cleaning, setCleaning] = useState(false)
+
+  const isAdmin = role === 'admin'
+
+  const handleCleanup = async () => {
+    if (!window.confirm('This will permanently delete ALL requests pointing to Firebase Storage. Continue?')) return
+    setCleaning(true)
+    try {
+      const legacy = requests.filter(r => r.googleDriveLink?.includes('firebasestorage'))
+      const promises = legacy.map(r => deleteRequest(r.id))
+      await Promise.all(promises)
+      showToast(`Cleaned up ${legacy.length} legacy requests`)
+    } catch {
+      showToast('Cleanup failed', 'error')
+    } finally {
+      setCleaning(false)
+    }
+  }
   const [selectedIds, setSelectedIds] = useState([])
 
   const scopeByDept = (reqs) => {
@@ -138,13 +154,25 @@ export default function HODDashboard({ user, userName, role, department }) {
           <h2 className="text-2xl font-bold text-gray-900">{t.hodTitle}</h2>
           <p className="text-gray-500 text-sm mt-1">{t.hodSubtitle}</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm shrink-0"
-        >
-          <Plus size={18} />
-          {t.newRequest}
-        </button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <button
+              onClick={handleCleanup}
+              disabled={cleaning}
+              className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2.5 rounded-lg font-medium transition-colors shrink-0 disabled:opacity-50"
+            >
+              <Trash2 size={18} />
+              {cleaning ? 'Cleaning...' : 'Cleanup Legacy'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm shrink-0"
+          >
+            <Plus size={18} />
+            {t.newRequest}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

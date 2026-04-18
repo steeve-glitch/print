@@ -119,5 +119,10 @@ export function useRequests(user) {
     await Promise.all(promises)
   }
 
-  return { requests, loading, createRequest, updateRequest, bulkUpdate }
+  const deleteRequest = async (id) => {
+    const { deleteDoc } = await import('firebase/firestore')
+    await deleteDoc(doc(db, 'printRequests', id))
+  }
+
+  return { requests, loading, createRequest, updateRequest, bulkUpdate, deleteRequest }
 }
