@@ -27,10 +27,13 @@ export default function HODDashboard({ user, userName, role, department }) {
   const isAdmin = role === 'admin'
 
   const handleCleanup = async () => {
-    if (!window.confirm('This will permanently delete ALL requests pointing to Firebase Storage. Continue?')) return
+    if (!window.confirm('This will permanently delete ALL requests pointing to Firebase (firebasestorage or appspot). Continue?')) return
     setCleaning(true)
     try {
-      const legacy = requests.filter(r => r.googleDriveLink?.includes('firebasestorage'))
+      const legacy = requests.filter(r => 
+        r.googleDriveLink?.includes('firebasestorage') || 
+        r.googleDriveLink?.includes('appspot.com')
+      )
       const promises = legacy.map(r => deleteRequest(r.id))
       await Promise.all(promises)
       showToast(`Cleaned up ${legacy.length} legacy requests`)
@@ -40,6 +43,21 @@ export default function HODDashboard({ user, userName, role, department }) {
       setCleaning(false)
     }
   }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return
+    if (!window.confirm(`Permanently delete ${selectedIds.length} selected requests? This cannot be undone.`)) return
+    
+    try {
+      const promises = selectedIds.map(id => deleteRequest(id))
+      await Promise.all(promises)
+      showToast(`${selectedIds.length} requests deleted permanently`)
+      setSelectedIds([])
+    } catch {
+      showToast('Deletion failed', 'error')
+    }
+  }
+
   const [selectedIds, setSelectedIds] = useState([])
 
   const scopeByDept = (reqs) => {
@@ -265,13 +283,23 @@ export default function HODDashboard({ user, userName, role, department }) {
                         {selectedIds.length === myReady.length ? 'Deselect All' : 'Select All'}
                       </button>
                       {selectedIds.length > 0 && (
-                        <button
-                          onClick={handleBulkCollect}
-                          className="text-[10px] bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors font-bold flex items-center gap-1"
-                        >
-                          <Trash2 size={10} />
-                          Collect ({selectedIds.length})
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleBulkCollect}
+                            className="text-[10px] bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors font-bold flex items-center gap-1"
+                          >
+                            Mark Collected ({selectedIds.length})
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={handleBulkDelete}
+                              className="text-[10px] bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors font-bold flex items-center gap-1"
+                            >
+                              <Trash2 size={10} />
+                              Delete ({selectedIds.length})
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -292,7 +320,7 @@ export default function HODDashboard({ user, userName, role, department }) {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-gray-900 text-sm truncate">{req.documentName}</p>
-                            {req.googleDriveLink?.includes('firebasestorage') && (
+                            {(req.googleDriveLink?.includes('firebasestorage') || req.googleDriveLink?.includes('appspot.com')) && (
                               <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">LEGACY</span>
                             )}
                           </div>
