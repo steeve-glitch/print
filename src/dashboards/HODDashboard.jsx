@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCheck, Inbox, Loader, Plus, Package, Clock } from 'lucide-react'
+import { CheckCheck, Inbox, Loader, Plus, Package, Clock, Trash2, CheckSquare, Square } from 'lucide-react'
 import { useT } from '../i18n'
 import { useRequests } from '../hooks/useRequests'
 import { useToast } from '../components/Toast'
@@ -19,9 +19,12 @@ const toMs = (ts) => {
 export default function HODDashboard({ user, userName, role, department }) {
   const { t } = useT()
   const { showToast } = useToast()
-  const { requests, loading, createRequest, updateRequest } = useRequests(user)
+  const { requests, loading, createRequest, updateRequest, bulkUpdate } = useRequests(user)
   const [tab, setTab] = useState('pending')
   const [showModal, setShowModal] = useState(false)
+  
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState([])
 
   const scopeByDept = (reqs) => {
     if (role === 'admin' || !department) return reqs
@@ -50,6 +53,31 @@ export default function HODDashboard({ user, userName, role, department }) {
 
   const myReady = myRequests.filter((r) => r.status === 'ready')
   const myActive = myRequests.filter((r) => r.status !== 'ready' && r.status !== 'collected')
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
+  const handleSelectAllReady = () => {
+    if (selectedIds.length === myReady.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(myReady.map(r => r.id))
+    }
+  }
+
+  const handleBulkCollect = async () => {
+    if (selectedIds.length === 0) return
+    try {
+      await bulkUpdate(selectedIds, { status: 'collected' })
+      showToast(t.toastCollected)
+      setSelectedIds([])
+    } catch {
+      showToast(t.toastUpdateError, 'error')
+    }
+  }
 
   const handleApprove = async (id) => {
     try {
@@ -196,18 +224,50 @@ export default function HODDashboard({ user, userName, role, department }) {
               {/* Ready for pickup */}
               {myReady.length > 0 && (
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                  <h3 className="font-semibold text-green-800 flex items-center gap-2 mb-3">
-                    <Package size={18} />
-                    {t.readyForPickup}
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-green-800 flex items-center gap-2">
+                      <Package size={18} />
+                      {t.readyForPickup}
+                    </h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSelectAllReady}
+                        className="text-[10px] bg-white border border-green-200 text-green-700 px-2 py-1 rounded hover:bg-green-100 transition-colors font-medium"
+                      >
+                        {selectedIds.length === myReady.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                      {selectedIds.length > 0 && (
+                        <button
+                          onClick={handleBulkCollect}
+                          className="text-[10px] bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors font-bold flex items-center gap-1"
+                        >
+                          <Trash2 size={10} />
+                          Collect ({selectedIds.length})
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     {myReady.map((req) => (
                       <div
                         key={req.id}
-                        className="bg-white rounded-lg border border-green-100 p-3 flex items-center justify-between gap-3"
+                        className={`bg-white rounded-lg border p-3 flex items-center gap-3 transition-colors ${
+                          selectedIds.includes(req.id) ? 'border-green-500 bg-green-50/50' : 'border-green-100'
+                        }`}
                       >
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-900 text-sm truncate">{req.documentName}</p>
+                        <button 
+                          onClick={() => toggleSelect(req.id)}
+                          className={`shrink-0 ${selectedIds.includes(req.id) ? 'text-green-600' : 'text-gray-300'}`}
+                        >
+                          {selectedIds.includes(req.id) ? <CheckSquare size={20} /> : <Square size={20} />}
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900 text-sm truncate">{req.documentName}</p>
+                            {req.googleDriveLink?.includes('firebasestorage') && (
+                              <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">LEGACY</span>
+                            )}
+                          </div>
                           <p className="text-xs text-gray-500">{req.copies} {t.copies} · {req.size || 'A4'}</p>
                           {req.googleDriveLink && (
                             <div className="mt-1">

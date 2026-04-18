@@ -1,9 +1,8 @@
 import { useState, useRef } from 'react'
 import { X, UploadCloud, FileText } from 'lucide-react'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { useT } from '../i18n'
 import { DEPARTMENTS } from '../constants'
-import { storage, auth } from '../firebase'
+import { auth } from '../firebase'
 import { useStorage } from '../hooks/useStorage'
 
 export default function NewRequestModal({ onSubmit, onClose, defaultDepartment }) {
@@ -46,23 +45,17 @@ export default function NewRequestModal({ onSubmit, onClose, defaultDepartment }
     try {
       let docUrl = form.googleDriveLink
       if (mode === 'upload' && file) {
-        if (import.meta.env.VITE_WORKER_URL) {
-          // Use Cloudflare Worker if configured
-          await uploadFile(file)
-          // The worker URL for download would be:
-          docUrl = `${import.meta.env.VITE_WORKER_URL}/download/${encodeURIComponent(file.name)}`
-        } else {
-          // Fallback to Firebase Storage
-          const uid = auth.currentUser?.uid ?? 'unknown'
-          const storageRef = ref(storage, `uploads/${uid}/${Date.now()}_${file.name}`)
-          const timeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Upload timed out — Firebase Storage may not be enabled on this project.')), 15000)
-          )
-          await Promise.race([uploadBytes(storageRef, file), timeout])
-          docUrl = await getDownloadURL(storageRef)
+        if (!import.meta.env.VITE_WORKER_URL) {
+          throw new Error('Cloudflare Worker is not configured. Please contact the administrator.')
         }
+        // Use Cloudflare Worker
+        await uploadFile(file)
+        docUrl = `${import.meta.env.VITE_WORKER_URL}/download/${encodeURIComponent(file.name)}`
       }
       await onSubmit({ ...form, copies: parseInt(form.copies, 10), googleDriveLink: docUrl })
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert(error.message || 'Failed to upload document.')
     } finally {
       setSubmitting(false)
     }

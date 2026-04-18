@@ -114,5 +114,10 @@ export function useRequests(user) {
     }
   }
 
-  return { requests, loading, createRequest, updateRequest }
+  const bulkUpdate = async (ids, updates) => {
+    const promises = ids.map(id => updateDoc(doc(db, 'printRequests', id), updates))
+    await Promise.all(promises)
+  }
+
+  return { requests, loading, createRequest, updateRequest, bulkUpdate }
 }

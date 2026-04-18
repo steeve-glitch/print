@@ -1,7 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
-import { getStorage, ref, deleteObject } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,7 +14,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
-export const storage = getStorage(app)
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL
 const AUTH_TOKEN = import.meta.env.VITE_WORKER_AUTH_TOKEN
@@ -43,21 +41,11 @@ export async function uploadToR2(file) {
 }
 
 /**
- * Deletes a file from Firebase Storage or Cloudflare R2 given its URL.
+ * Deletes a file from Cloudflare R2 given its URL.
+ * Firebase Storage is disabled on Spark plan, so we ignore those URLs.
  */
 export async function deleteFileByUrl(url) {
   if (!url) return
-
-  // Handle Firebase Storage
-  if (url.includes('firebasestorage.googleapis.com')) {
-    try {
-      const fileRef = ref(storage, url)
-      await deleteObject(fileRef)
-    } catch (error) {
-      console.error('Error deleting file from Firebase:', error)
-    }
-    return
-  }
 
   // Handle Cloudflare R2
   if (WORKER_URL && url.startsWith(WORKER_URL)) {
@@ -75,4 +63,6 @@ export async function deleteFileByUrl(url) {
       console.error('Error deleting file from R2:', error)
     }
   }
+  
+  // Firebase Storage URLs are ignored because the service is disabled (402 Error)
 }
