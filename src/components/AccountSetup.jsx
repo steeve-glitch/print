@@ -12,6 +12,7 @@ export default function AccountSetup({ user, onSetup }) {
     name: user.displayName || '',
     role: '',
     department: '',
+    notificationFrequency: 'instant',
   })
 
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))
@@ -32,6 +33,7 @@ export default function AccountSetup({ user, onSetup }) {
         name: form.name.trim(),
         role: form.role,
         department: needsDepartment ? form.department : null,
+        notificationFrequency: form.notificationFrequency,
       })
     } finally {
       setSubmitting(false)
@@ -107,6 +109,21 @@ export default function AccountSetup({ user, onSetup }) {
               </select>
             </div>
           )}
+
+          {/* Notifications */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {t.notificationLabel}
+            </label>
+            <select
+              value={form.notificationFrequency}
+              onChange={set('notificationFrequency')}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent bg-white"
+            >
+              <option value="instant">{t.notifyInstant}</option>
+              <option value="never">{t.notifyNever}</option>
+            </select>
+          </div>
 
           <button
             type="submit"

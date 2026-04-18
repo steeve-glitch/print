@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { CheckCheck, Inbox, Loader, Plus, Package, Clock, ExternalLink } from 'lucide-react'
+import { CheckCheck, Inbox, Loader, Plus, Package, Clock } from 'lucide-react'
 import { useT } from '../i18n'
 import { useRequests } from '../hooks/useRequests'
 import { useToast } from '../components/Toast'
 import RequestCard from '../components/RequestCard'
 import StatusBadge from '../components/StatusBadge'
 import NewRequestModal from '../components/NewRequestModal'
+import DocumentPreviewLink from '../components/DocumentPreviewLink'
+import { deleteFileByUrl } from '../firebase'
 
 // Handles both legacy numeric timestamps and Firestore Timestamps
 const toMs = (ts) => {
@@ -51,7 +53,8 @@ export default function HODDashboard({ user, userName, role, department }) {
 
   const handleApprove = async (id) => {
     try {
-      await updateRequest(id, { status: 'approved', hodComment: '' })
+      const request = requests.find((r) => r.id === id)
+      await updateRequest(id, { status: 'approved', hodComment: '' }, request)
       showToast(t.toastApproved)
     } catch {
       showToast(t.toastUpdateError, 'error')
@@ -60,7 +63,11 @@ export default function HODDashboard({ user, userName, role, department }) {
 
   const handleReject = async (id, comment) => {
     try {
-      await updateRequest(id, { status: 'rejected', hodComment: comment })
+      const request = requests.find((r) => r.id === id)
+      await updateRequest(id, { status: 'rejected', hodComment: comment }, request)
+      if (request?.googleDriveLink) {
+        await deleteFileByUrl(request.googleDriveLink)
+      }
       showToast(t.toastRejected)
     } catch {
       showToast(t.toastUpdateError, 'error')
@@ -69,7 +76,11 @@ export default function HODDashboard({ user, userName, role, department }) {
 
   const handleCollect = async (id) => {
     try {
-      await updateRequest(id, { status: 'collected' })
+      const request = requests.find((r) => r.id === id)
+      await updateRequest(id, { status: 'collected' }, request)
+      if (request?.googleDriveLink) {
+        await deleteFileByUrl(request.googleDriveLink)
+      }
       showToast(t.toastCollected)
     } catch {
       showToast(t.toastUpdateError, 'error')
@@ -198,6 +209,15 @@ export default function HODDashboard({ user, userName, role, department }) {
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 text-sm truncate">{req.documentName}</p>
                           <p className="text-xs text-gray-500">{req.copies} {t.copies} · {req.size || 'A4'}</p>
+                          {req.googleDriveLink && (
+                            <div className="mt-1">
+                              <DocumentPreviewLink 
+                                url={req.googleDriveLink} 
+                                documentName={req.documentName} 
+                                label={t.viewDocument} 
+                              />
+                            </div>
+                          )}
                         </div>
                         <button
                           onClick={() => handleCollect(req.id)}
@@ -246,9 +266,11 @@ export default function HODDashboard({ user, userName, role, department }) {
                           </td>
                           <td className="px-4 py-3 text-center">
                             {req.googleDriveLink && (
-                              <a href={req.googleDriveLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 inline-flex">
-                                <ExternalLink size={14} />
-                              </a>
+                              <DocumentPreviewLink 
+                                url={req.googleDriveLink} 
+                                documentName={req.documentName} 
+                                label="" 
+                              />
                             )}
                           </td>
                         </tr>

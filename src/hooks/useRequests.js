@@ -7,13 +7,17 @@ import {
   addDoc,
   updateDoc,
   doc,
+  getDocs,
+  where,
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase'
+import { useStorage } from './useStorage'
 
 export function useRequests(user) {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
+  const { sendEmail } = useStorage()
 
   useEffect(() => {
     if (!user?.uid) {
@@ -40,7 +44,7 @@ export function useRequests(user) {
   }, [user?.uid])
 
   const createRequest = async (data, user, userName) => {
-    await addDoc(collection(db, 'printRequests'), {
+    const docRef = await addDoc(collection(db, 'printRequests'), {
       documentName: data.documentName,
       googleDriveLink: data.googleDriveLink,
       copies: data.copies,
@@ -57,10 +61,57 @@ export function useRequests(user) {
       hodComment: '',
       printerNotes: '',
     })
+
+    // Notify HODs of the department
+    try {
+      const hodQuery = query(
+        collection(db, 'users'), 
+        where('department', '==', data.department),
+        where('role', 'in', ['hod', 'admin'])
+      )
+      const hodSnapshot = await getDocs(hodQuery)
+      hodSnapshot.forEach(doc => {
+        const hod = doc.data()
+        if (hod.email && hod.notificationFrequency !== 'never') {
+          sendEmail(
+            hod.email,
+            `New Print Request: ${data.documentName}`,
+            `<p>A new print request has been submitted for your department (${data.department}) by ${userName}.</p>
+             <p><b>Document:</b> ${data.documentName}</p>
+             <p>Please log in to the Print Manager to approve or reject it.</p>`
+          )
+        }
+      })
+    } catch (e) {
+      console.error('Failed to send HOD notification', e)
+    }
   }
 
-  const updateRequest = async (id, updates) => {
+  const updateRequest = async (id, updates, reqData) => {
     await updateDoc(doc(db, 'printRequests', id), updates)
+
+    // Notify Teacher of status change
+    if (updates.status && reqData?.requesterEmail) {
+      const statusLabels = {
+        approved: 'Approved',
+        rejected: 'Rejected',
+        printing: 'Printing',
+        ready: 'Ready for Pickup',
+        completed: 'Completed'
+      }
+      
+      try {
+        sendEmail(
+          reqData.requesterEmail,
+          `Print Request Update: ${statusLabels[updates.status] || updates.status}`,
+          `<p>Your print request <b>${reqData.documentName}</b> has been updated to: <b>${statusLabels[updates.status] || updates.status}</b>.</p>
+           ${updates.hodComment ? `<p><b>HOD Comment:</b> ${updates.hodComment}</p>` : ''}
+           <p>Thank you for using Print Manager.</p>`
+        )
+      } catch (e) {
+        console.error('Failed to send teacher notification', e)
+      }
+    }
   }
 
   return { requests, loading, createRequest, updateRequest }

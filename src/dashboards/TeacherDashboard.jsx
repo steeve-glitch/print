@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Plus, Package, Clock, ExternalLink, Loader, Users } from 'lucide-react'
+import { Plus, Package, Clock, Loader, Users } from 'lucide-react'
 import { useT } from '../i18n'
 import { useRequests } from '../hooks/useRequests'
 import { useToast } from '../components/Toast'
 import StatusBadge from '../components/StatusBadge'
 import NewRequestModal from '../components/NewRequestModal'
+import DocumentPreviewLink from '../components/DocumentPreviewLink'
+import { deleteFileByUrl } from '../firebase'
 
 const ACTIVE_STATUSES = ['pending_hod', 'approved', 'printing', 'ready']
 
@@ -31,7 +33,11 @@ export default function TeacherDashboard({ user, userName, department }) {
 
   const handleCollect = async (id) => {
     try {
+      const request = requests.find((r) => r.id === id)
       await updateRequest(id, { status: 'collected' })
+      if (request?.googleDriveLink) {
+        await deleteFileByUrl(request.googleDriveLink)
+      }
       showToast(t.toastCollected)
     } catch {
       showToast(t.toastUpdateError, 'error')
@@ -93,6 +99,15 @@ export default function TeacherDashboard({ user, userName, department }) {
                       <p className="text-xs text-gray-500">
                         {req.copies} {t.copies} · {req.size || 'A4'} · {req.department}
                       </p>
+                      {req.googleDriveLink && (
+                        <div className="mt-1">
+                          <DocumentPreviewLink 
+                            url={req.googleDriveLink} 
+                            documentName={req.documentName} 
+                            label={t.viewDocument} 
+                          />
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => handleCollect(req.id)}
@@ -144,14 +159,11 @@ export default function TeacherDashboard({ user, userName, department }) {
                       </td>
                       <td className="px-4 py-3 text-center">
                         {req.googleDriveLink && (
-                          <a
-                            href={req.googleDriveLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:text-blue-700 inline-flex"
-                          >
-                            <ExternalLink size={14} />
-                          </a>
+                          <DocumentPreviewLink 
+                            url={req.googleDriveLink} 
+                            documentName={req.documentName} 
+                            label="" 
+                          />
                         )}
                       </td>
                     </tr>

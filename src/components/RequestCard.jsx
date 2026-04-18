@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { CheckCircle, XCircle, ExternalLink, Clock } from 'lucide-react'
+import { CheckCircle, XCircle, Clock } from 'lucide-react'
 import { useT } from '../i18n'
 import StatusBadge from './StatusBadge'
+import DocumentPreviewLink from './DocumentPreviewLink'
 
 export default function RequestCard({ req, showActions, onApprove, onReject }) {
   const { t } = useT()
@@ -23,6 +24,11 @@ export default function RequestCard({ req, showActions, onApprove, onReject }) {
           <p className="text-sm text-gray-500">
             {req.requesterName} · {req.department}
           </p>
+          {req.createdAt && (
+            <p className="text-[10px] text-gray-400">
+              {new Date(req.createdAt.seconds * 1000).toLocaleString()}
+            </p>
+          )}
         </div>
         <StatusBadge status={req.status} />
       </div>
@@ -40,15 +46,11 @@ export default function RequestCard({ req, showActions, onApprove, onReject }) {
       </div>
 
       {req.googleDriveLink && (
-        <a
-          href={req.googleDriveLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800"
-        >
-          <ExternalLink size={13} />
-          {t.viewDocument}
-        </a>
+        <DocumentPreviewLink 
+          url={req.googleDriveLink} 
+          documentName={req.documentName} 
+          label={t.viewDocument} 
+        />
       )}
 
       {req.hodComment && (

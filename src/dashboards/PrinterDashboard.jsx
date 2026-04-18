@@ -1,13 +1,23 @@
 import { Printer, Clock, AlertCircle, ExternalLink, CheckSquare, Loader } from 'lucide-react'
 import { useT } from '../i18n'
 import { useRequests } from '../hooks/useRequests'
+import { useStorage } from '../hooks/useStorage'
 import { useToast } from '../components/Toast'
 import StatusBadge from '../components/StatusBadge'
 
 export default function PrinterDashboard({ user }) {
   const { t } = useT()
+  const { viewFile } = useStorage()
   const { showToast } = useToast()
   const { requests, loading, updateRequest } = useRequests(user)
+
+  const handleView = (e, req) => {
+    const isR2 = req.googleDriveLink?.includes(import.meta.env.VITE_WORKER_URL)
+    if (isR2) {
+      e.preventDefault()
+      viewFile(req.googleDriveLink, req.documentName)
+    }
+  }
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -23,7 +33,8 @@ export default function PrinterDashboard({ user }) {
 
   const handleStartPrinting = async (id) => {
     try {
-      await updateRequest(id, { status: 'printing' })
+      const request = requests.find((r) => r.id === id)
+      await updateRequest(id, { status: 'printing' }, request)
       showToast(t.toastPrinting)
     } catch {
       showToast(t.toastUpdateError, 'error')
@@ -32,7 +43,8 @@ export default function PrinterDashboard({ user }) {
 
   const handleMarkReady = async (id) => {
     try {
-      await updateRequest(id, { status: 'ready' })
+      const request = requests.find((r) => r.id === id)
+      await updateRequest(id, { status: 'ready' }, request)
       showToast(t.toastReady)
     } catch {
       showToast(t.toastUpdateError, 'error')
@@ -119,6 +131,7 @@ export default function PrinterDashboard({ user }) {
                 {req.googleDriveLink && (
                   <a
                     href={req.googleDriveLink}
+                    onClick={(e) => handleView(e, req)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800"

@@ -105,6 +105,9 @@ const en = {
   neededByLabel: 'Needed By',
   departmentLabel: 'Department',
   selectDepartmentPlaceholder: 'Select department',
+  notificationLabel: 'Email Notifications',
+  notifyInstant: 'Instant',
+  notifyNever: 'Never (Silent)',
   submitRequest: 'Submit Request',
   submitting: 'Submitting...',
 
@@ -220,6 +223,9 @@ const es = {
   neededByLabel: 'Necesario Para',
   departmentLabel: 'Departamento',
   selectDepartmentPlaceholder: 'Seleccionar departamento',
+  notificationLabel: 'Notificaciones por Correo',
+  notifyInstant: 'Instantáneo',
+  notifyNever: 'Nunca (Silencioso)',
   submitRequest: 'Enviar Solicitud',
   submitting: 'Enviando...',
 
