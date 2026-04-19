@@ -49,9 +49,11 @@ service cloud.firestore {
     match /printRequests/{docId} {
 
       // Any signed-in user may read requests.
-      // Role-based filtering (own requests, dept, queue) is handled client-side.
-      // get() calls in list rules are unreliable in Firestore — keep reads simple.
       allow read: if isSignedIn();
+
+      // Admins have full access
+      allow write: if isSignedIn() && isAdmin();
+      allow delete: if isSignedIn() && isAdmin();
 
       allow create: if isSignedIn() && (isTeacher() || isHod())
                     && request.resource.data.requesterId == request.auth.uid

@@ -5,16 +5,18 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from '../firebase'
+import { auth } from '../firebase'
+
+const WORKER_URL = import.meta.env.VITE_WORKER_URL;
+const AUTH_TOKEN = import.meta.env.VITE_WORKER_AUTH_TOKEN;
 
 export function useAuth() {
-  // undefined = loading, null = signed out, object = signed in
   const [user, setUser] = useState(undefined)
   const [role, setRole] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [userName, setUserName] = useState('')
   const [department, setDepartment] = useState(null)
+  const [notificationFrequency, setNotificationFrequency] = useState('instant')
   const [needsSetup, setNeedsSetup] = useState(false)
 
   useEffect(() => {
@@ -22,35 +24,44 @@ export function useAuth() {
       if (firebaseUser) {
         setUser(firebaseUser)
         try {
-          const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
-          const isHardcodedAdmin = firebaseUser.email === 'sbell@stjohns.cl'
+          // Sync with Cloudflare D1
+          const response = await fetch(`${WORKER_URL}/api/users/sync`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${AUTH_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: firebaseUser.uid,
+              email: firebaseUser.email,
+              name: firebaseUser.displayName,
+            }),
+          });
+
+          const data = await response.json();
+          const isHardcodedAdmin = firebaseUser.email === 'sbell@stjohns.cl';
           
-          if (snap.exists()) {
-            const data = snap.data()
-            const baseRole = data.role || null
-            const adminStatus = isHardcodedAdmin || baseRole === 'admin'
-            
-            setIsAdmin(adminStatus)
-            setRole(adminStatus ? 'admin' : baseRole)
-            setUserName(data.name || firebaseUser.displayName || '')
-            setDepartment(data.department || null)
-            setNeedsSetup(!adminStatus && !data.role)
+          if (data && data.role) {
+            const adminStatus = isHardcodedAdmin || data.role === 'admin';
+            setIsAdmin(adminStatus);
+            setRole(adminStatus ? 'admin' : data.role);
+            setUserName(data.name || firebaseUser.displayName || '');
+            setDepartment(data.department || null);
+            setNotificationFrequency(data.notificationFrequency || 'instant');
+            setNeedsSetup(false);
           } else {
-            setIsAdmin(isHardcodedAdmin)
-            setRole(isHardcodedAdmin ? 'admin' : null)
-            setUserName(firebaseUser.displayName || '')
-            setDepartment(null)
-            setNeedsSetup(!isHardcodedAdmin)
+            setIsAdmin(isHardcodedAdmin);
+            setRole(isHardcodedAdmin ? 'admin' : null);
+            setUserName(firebaseUser.displayName || '');
+            setNeedsSetup(!isHardcodedAdmin);
           }
         } catch (err) {
-          console.error('Error fetching user role:', err)
-          setRole(null)
-          setDepartment(null)
-          setNeedsSetup(false)
+          console.error('Error syncing user:', err);
         }
       } else {
         setUser(null)
         setRole(null)
+        setIsAdmin(false)
         setUserName('')
         setDepartment(null)
         setNeedsSetup(false)
@@ -68,17 +79,27 @@ export function useAuth() {
     await fbSignOut(auth)
   }
 
-  const setupAccount = async ({ name, role: newRole, department: newDept }) => {
-    await setDoc(doc(db, 'users', user.uid), {
-      name,
-      role: newRole,
-      department: newDept,
-      createdAt: serverTimestamp(),
-    }, { merge: true })
-    setRole(newRole)
-    setUserName(name)
-    setDepartment(newDept)
-    setNeedsSetup(false)
+  const setupAccount = async ({ name, role: newRole, department: newDept, notificationFrequency: newFreq }) => {
+    await fetch(`${WORKER_URL}/api/users/setup`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${AUTH_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id: user.uid,
+        name,
+        role: newRole,
+        department: newDept,
+        notificationFrequency: newFreq,
+      }),
+    });
+
+    setRole(newRole);
+    setUserName(name);
+    setDepartment(newDept);
+    setNotificationFrequency(newFreq);
+    setNeedsSetup(false);
   }
 
   return {
@@ -88,6 +109,7 @@ export function useAuth() {
     setRole,
     userName,
     department,
+    notificationFrequency,
     needsSetup,
     loading: user === undefined,
     signIn,

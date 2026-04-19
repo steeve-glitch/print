@@ -24,6 +24,13 @@
 			"binding": "DOCUMENTS_BUCKET",
 			"bucket_name": "printing-documents"
 		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "print-db",
+			"database_id": "912b40e2-3c46-4781-816a-20df80e79b0d"
+		}
 	]
 	/**
 	 * Smart Placement
