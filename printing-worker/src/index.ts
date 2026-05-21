@@ -17,8 +17,8 @@ export default {
 		// CORS Headers
 		const corsHeaders = {
 			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+			'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Role, X-User-Dept, X-User-Id',
 		};
 
 		if (method === 'OPTIONS') {
@@ -135,6 +135,76 @@ export default {
 			if (path.startsWith('/api/requests/') && method === 'DELETE') {
 				const id = path.split('/').pop();
 				await env.DB.prepare('DELETE FROM print_requests WHERE id = ?').bind(id).run();
+				return Response.json({ success: true }, { headers: corsHeaders });
+			}
+
+			// --- RESERVATIONS API ---
+			if (path === '/api/reservations' && method === 'GET') {
+				const from = url.searchParams.get('from');
+				const to = url.searchParams.get('to');
+				if (!from || !to) {
+					return new Response('from and to params required', { status: 400, headers: corsHeaders });
+				}
+				const { results } = await env.DB.prepare(
+					'SELECT * FROM reservations WHERE date >= ? AND date <= ? ORDER BY date ASC, period ASC'
+				).bind(from, to).all();
+				return Response.json(results, { headers: corsHeaders });
+			}
+
+			if (path === '/api/reservations' && method === 'POST') {
+				const data = await request.json() as any;
+				const { date, period, pcCount, teacherId, teacherName, department, notes } = data;
+				const row = await env.DB.prepare(
+					'SELECT COALESCE(SUM(pcCount), 0) as total FROM reservations WHERE date = ? AND period = ?'
+				).bind(date, period).first() as any;
+				if ((row?.total || 0) + pcCount > 30) {
+					return Response.json({ error: 'Not enough PCs available' }, { status: 409, headers: corsHeaders });
+				}
+				const id = crypto.randomUUID();
+				await env.DB.prepare(
+					'INSERT INTO reservations (id, date, period, pcCount, teacherId, teacherName, department, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+				).bind(id, date, period, pcCount, teacherId, teacherName, department, notes || '').run();
+				return Response.json({ id }, { status: 201, headers: corsHeaders });
+			}
+
+			if (path.startsWith('/api/reservations/') && method === 'DELETE') {
+				const id = path.split('/').pop();
+				const userRole = request.headers.get('X-User-Role');
+				const userId = request.headers.get('X-User-Id');
+				const reservation = await env.DB.prepare('SELECT * FROM reservations WHERE id = ?').bind(id).first() as any;
+				if (!reservation) return new Response('Not found', { status: 404, headers: corsHeaders });
+				if (userRole !== 'printer' && userRole !== 'admin' && reservation.teacherId !== userId) {
+					return new Response('Forbidden', { status: 403, headers: corsHeaders });
+				}
+				await env.DB.prepare('DELETE FROM reservations WHERE id = ?').bind(id).run();
+				return Response.json({ success: true }, { headers: corsHeaders });
+			}
+
+			if (path.startsWith('/api/reservations/') && method === 'PATCH') {
+				const id = path.split('/').pop();
+				const userRole = request.headers.get('X-User-Role');
+				if (userRole !== 'printer' && userRole !== 'admin') {
+					return new Response('Forbidden', { status: 403, headers: corsHeaders });
+				}
+				const data = await request.json() as any;
+				const { pcCount, notes } = data;
+				if (pcCount !== undefined) {
+					const reservation = await env.DB.prepare('SELECT * FROM reservations WHERE id = ?').bind(id).first() as any;
+					if (!reservation) return new Response('Not found', { status: 404, headers: corsHeaders });
+					const row = await env.DB.prepare(
+						'SELECT COALESCE(SUM(pcCount), 0) as total FROM reservations WHERE date = ? AND period = ? AND id != ?'
+					).bind(reservation.date, reservation.period, id).first() as any;
+					if ((row?.total || 0) + pcCount > 30) {
+						return Response.json({ error: 'Not enough PCs available' }, { status: 409, headers: corsHeaders });
+					}
+				}
+				if (pcCount !== undefined && notes !== undefined) {
+					await env.DB.prepare('UPDATE reservations SET pcCount = ?, notes = ? WHERE id = ?').bind(pcCount, notes, id).run();
+				} else if (pcCount !== undefined) {
+					await env.DB.prepare('UPDATE reservations SET pcCount = ? WHERE id = ?').bind(pcCount, id).run();
+				} else if (notes !== undefined) {
+					await env.DB.prepare('UPDATE reservations SET notes = ? WHERE id = ?').bind(notes, id).run();
+				}
 				return Response.json({ success: true }, { headers: corsHeaders });
 			}
 

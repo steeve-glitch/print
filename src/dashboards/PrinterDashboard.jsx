@@ -1,15 +1,18 @@
-import { Printer, Clock, AlertCircle, ExternalLink, CheckSquare, Loader } from 'lucide-react'
+import { useState } from 'react'
+import { Printer, Clock, AlertCircle, ExternalLink, CheckSquare, Loader, Monitor } from 'lucide-react'
 import { useT } from '../i18n'
 import { useRequests } from '../hooks/useRequests'
 import { useStorage } from '../hooks/useStorage'
 import { useToast } from '../components/Toast'
 import StatusBadge from '../components/StatusBadge'
+import ReservationGrid from '../components/ReservationGrid'
 
-export default function PrinterDashboard({ user }) {
+export default function PrinterDashboard({ user, userName, department }) {
   const { t } = useT()
   const { viewFile } = useStorage()
   const { showToast } = useToast()
   const { requests, loading, updateRequest } = useRequests(user, 'printer')
+  const [view, setView] = useState('queue')
 
   const handleView = (e, req) => {
     const isR2 = req.googleDriveLink?.includes(import.meta.env.VITE_WORKER_URL)
@@ -58,7 +61,32 @@ export default function PrinterDashboard({ user }) {
         <p className="text-gray-500 text-sm mt-1">{t.printerSubtitle}</p>
       </div>
 
-      {loading ? (
+      {/* Tab bar */}
+      <div className="flex border-b border-gray-200">
+        <button
+          onClick={() => setView('queue')}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            view === 'queue' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          {t.printRequestsTab}
+        </button>
+        <button
+          onClick={() => setView('computers')}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            view === 'computers' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Monitor size={14} />
+          {t.computersTab}
+        </button>
+      </div>
+
+      {view === 'computers' && (
+        <ReservationGrid user={user} userName={userName} role="printer" department={department} />
+      )}
+
+      {view === 'queue' && (loading ? (
         <div className="flex justify-center py-20">
           <Loader size={28} className="animate-spin text-gray-300" />
         </div>
@@ -166,7 +194,7 @@ export default function PrinterDashboard({ user }) {
             )
           })}
         </div>
-      )}
+      ))}
     </div>
   )
 }

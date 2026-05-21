@@ -9,6 +9,20 @@ CREATE TABLE IF NOT EXISTS users (
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Reservations Table
+CREATE TABLE IF NOT EXISTS reservations (
+    id TEXT PRIMARY KEY,
+    date TEXT NOT NULL,
+    period TEXT NOT NULL,
+    pcCount INTEGER NOT NULL,
+    teacherId TEXT NOT NULL,
+    teacherName TEXT,
+    department TEXT,
+    notes TEXT DEFAULT '',
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (teacherId) REFERENCES users(id)
+);
+
 -- Print Requests Table
 CREATE TABLE IF NOT EXISTS print_requests (
     id TEXT PRIMARY KEY,
