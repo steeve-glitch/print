@@ -53,6 +53,15 @@ export default {
 
 			// --- REQUESTS API ---
 			if (path === '/api/requests' && method === 'GET') {
+				const userRole = request.headers.get('X-User-Role');
+				const userDept = request.headers.get('X-User-Dept');
+
+				if (userRole === 'teacher' && userDept) {
+					const { results } = await env.DB.prepare('SELECT * FROM print_requests WHERE department = ? ORDER BY createdAt DESC')
+						.bind(userDept).all();
+					return Response.json(results, { headers: corsHeaders });
+				}
+
 				const { results } = await env.DB.prepare('SELECT * FROM print_requests ORDER BY createdAt DESC').all();
 				return Response.json(results, { headers: corsHeaders });
 			}

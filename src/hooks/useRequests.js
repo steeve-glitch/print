@@ -4,7 +4,7 @@ import { useStorage } from './useStorage'
 const WORKER_URL = import.meta.env.VITE_WORKER_URL;
 const AUTH_TOKEN = import.meta.env.VITE_WORKER_AUTH_TOKEN;
 
-export function useRequests(user) {
+export function useRequests(user, role, department) {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const { sendEmail } = useStorage()
@@ -14,6 +14,8 @@ export function useRequests(user) {
       const response = await fetch(`${WORKER_URL}/api/requests`, {
         headers: {
           'Authorization': `Bearer ${AUTH_TOKEN}`,
+          'X-User-Role': role,
+          'X-User-Dept': department,
         },
       });
       const data = await response.json();

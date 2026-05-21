@@ -19,7 +19,7 @@ const toMs = (ts) => {
 export default function HODDashboard({ user, userName, role, department }) {
   const { t } = useT()
   const { showToast } = useToast()
-  const { requests, loading, createRequest, updateRequest, bulkUpdate, deleteRequest } = useRequests(user)
+  const { requests, loading, createRequest, updateRequest, bulkUpdate, deleteRequest } = useRequests(user, role, department)
   const [tab, setTab] = useState('pending')
   const [showModal, setShowModal] = useState(false)
   const [cleaning, setCleaning] = useState(false)

@@ -19,7 +19,7 @@ export default function NewRequestModal({ onSubmit, onClose, defaultDepartment }
     googleDriveLink: '',
     copies: 1,
     color: false,
-    size: 'A4',
+    size: 'Letter',
     doubleSided: false,
     neededBy: '',
     department: defaultDepartment || '',
@@ -274,23 +274,25 @@ export default function NewRequestModal({ onSubmit, onClose, defaultDepartment }
             </button>
           </div>
 
-          {/* Department */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              {t.departmentLabel} <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={form.department}
-              onChange={set('department')}
-              required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent bg-white"
-            >
-              <option value="">{t.selectDepartmentPlaceholder}</option>
-              {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
+          {/* Department — only show if not provided by default */}
+          {!defaultDepartment && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                {t.departmentLabel} <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.department}
+                onChange={set('department')}
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent bg-white"
+              >
+                <option value="">{t.selectDepartmentPlaceholder}</option>
+                {DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-3 pt-2">

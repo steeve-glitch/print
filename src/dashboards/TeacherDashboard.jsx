@@ -13,7 +13,7 @@ const ACTIVE_STATUSES = ['pending_hod', 'approved', 'printing', 'ready']
 export default function TeacherDashboard({ user, userName, department }) {
   const { t } = useT()
   const { showToast } = useToast()
-  const { requests, loading, createRequest, updateRequest } = useRequests(user)
+  const { requests, loading, createRequest, updateRequest } = useRequests(user, 'teacher', department)
   const [showModal, setShowModal] = useState(false)
 
   const myRequests = requests
@@ -28,7 +28,7 @@ export default function TeacherDashboard({ user, userName, department }) {
   const activeMyRequests = myRequests.filter((r) => r.status !== 'ready' && r.status !== 'collected')
 
   const deptRequests = requests
-    .filter((r) => r.requesterId !== user.uid && ACTIVE_STATUSES.includes(r.status))
+    .filter((r) => r.requesterId !== user.uid && r.department === department && ACTIVE_STATUSES.includes(r.status))
     .sort((a, b) => new Date(a.neededBy) - new Date(b.neededBy))
 
   const handleCollect = async (id) => {

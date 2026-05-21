@@ -9,7 +9,7 @@ export default function PrinterDashboard({ user }) {
   const { t } = useT()
   const { viewFile } = useStorage()
   const { showToast } = useToast()
-  const { requests, loading, updateRequest } = useRequests(user)
+  const { requests, loading, updateRequest } = useRequests(user, 'printer')
 
   const handleView = (e, req) => {
     const isR2 = req.googleDriveLink?.includes(import.meta.env.VITE_WORKER_URL)
