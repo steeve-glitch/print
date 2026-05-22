@@ -1,12 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Monitor, Loader, Ban } from 'lucide-react'
-import { PERIODS } from '../constants'
+import { PERIODS, TOTAL_PCS, isPrinterRole } from '../constants'
 import { useReservations } from '../hooks/useReservations'
 import { useToast } from './Toast'
 import { useT } from '../i18n'
 import ReservationModal from './ReservationModal'
 
-const TOTAL_PCS = 30
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 
 function getWeekDates(anchor) {
@@ -31,11 +30,18 @@ function todayStr() {
   return new Date().toISOString().split('T')[0]
 }
 
+function cellBg(isPast, isBlocked, isPrinter, isToday) {
+  if (isPast) return 'bg-gray-50/60 opacity-60 cursor-default'
+  if (isBlocked) return isPrinter ? 'bg-red-50 cursor-pointer hover:bg-red-100' : 'bg-red-50 cursor-not-allowed'
+  if (isToday) return 'bg-blue-50/20 cursor-pointer hover:bg-blue-50'
+  return 'bg-white cursor-pointer hover:bg-gray-50'
+}
+
 export default function ReservationGrid({ user, userName, role, department }) {
   const { t } = useT()
   const { showToast } = useToast()
   const [weekAnchor, setWeekAnchor] = useState(todayStr)
-  const weekDates = getWeekDates(weekAnchor)
+  const weekDates = useMemo(() => getWeekDates(weekAnchor), [weekAnchor])
   const [modalInfo, setModalInfo] = useState(null)
 
   const {
@@ -44,8 +50,29 @@ export default function ReservationGrid({ user, userName, role, department }) {
     blockPeriod, unblockPeriod,
   } = useReservations(user, role)
 
-  const isPrinter = role === 'printer' || role === 'admin'
-  const getBlock = (date, periodId) => blockedPeriods.find(b => b.date === date && b.period === periodId)
+  const isPrinter = isPrinterRole(role)
+
+  const blockMap = useMemo(() => {
+    const m = {}
+    for (const b of blockedPeriods) m[`${b.date}|${b.period}`] = b
+    return m
+  }, [blockedPeriods])
+
+  const cellMap = useMemo(() => {
+    const m = {}
+    for (const r of reservations) {
+      const key = `${r.date}|${r.period}`
+      if (!m[key]) m[key] = []
+      m[key].push(r)
+    }
+    return m
+  }, [reservations])
+
+  const getBlock = (date, periodId) => blockMap[`${date}|${periodId}`]
+  const cellReservations = (date, periodId) => cellMap[`${date}|${periodId}`] || []
+  const cellTotal = (date, periodId) => cellReservations(date, periodId).reduce((s, r) => s + r.pcCount, 0)
+  const userReservation = (date, periodId) =>
+    (cellMap[`${date}|${periodId}`] || []).find(r => r.teacherId === user.uid)
 
   const refresh = useCallback(() => {
     fetchReservations(weekDates[0], weekDates[4])
@@ -56,15 +83,6 @@ export default function ReservationGrid({ user, userName, role, department }) {
     const interval = setInterval(refresh, 10000)
     return () => clearInterval(interval)
   }, [refresh])
-
-  const cellReservations = (date, periodId) =>
-    reservations.filter(r => r.date === date && r.period === periodId)
-
-  const cellTotal = (date, periodId) =>
-    cellReservations(date, periodId).reduce((s, r) => s + r.pcCount, 0)
-
-  const userReservation = (date, periodId) =>
-    reservations.find(r => r.date === date && r.period === periodId && r.teacherId === user.uid)
 
   const shiftWeek = (direction) => {
     const d = new Date(weekDates[0] + 'T12:00:00')
@@ -205,8 +223,7 @@ export default function ReservationGrid({ user, userName, role, department }) {
                     const fillPct = (total / TOTAL_PCS) * 100
                     const isPast = date < today
                     const block = getBlock(date, period.id)
-                    const isBlocked = !!block
-                    const canClick = !isPast && (isPrinter || !isBlocked)
+                    const canClick = !isPast && (isPrinter || !block)
 
                     return (
                       <td
@@ -214,19 +231,9 @@ export default function ReservationGrid({ user, userName, role, department }) {
                         onClick={() => canClick && setModalInfo({ date, period: period.id })}
                         className={`px-2 py-2 border-r last:border-r-0 border-gray-200 transition-colors align-top ${
                           pi < PERIODS.length - 1 ? 'border-b' : ''
-                        } ${
-                          isPast
-                            ? 'bg-gray-50/60 opacity-60 cursor-default'
-                            : isBlocked
-                            ? isPrinter
-                              ? 'bg-red-50 cursor-pointer hover:bg-red-100'
-                              : 'bg-red-50 cursor-not-allowed'
-                            : date === today
-                            ? 'bg-blue-50/20 cursor-pointer hover:bg-blue-50'
-                            : 'bg-white cursor-pointer hover:bg-gray-50'
-                        }`}
+                        } ${cellBg(isPast, !!block, isPrinter, date === today)}`}
                       >
-                        {isBlocked ? (
+                        {block ? (
                           <div className="flex flex-col items-center justify-center min-h-[40px] gap-0.5">
                             <Ban size={13} className="text-red-300" />
                             <span className="text-[10px] text-red-400 font-medium">{t.blockedLabel}</span>

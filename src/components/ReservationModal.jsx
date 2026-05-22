@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { X, Monitor, Pencil, Trash2, Ban } from 'lucide-react'
-import { PERIODS } from '../constants'
+import { PERIODS, TOTAL_PCS, isPrinterRole } from '../constants'
 import { useT } from '../i18n'
-
-const TOTAL_PCS = 30
 
 export default function ReservationModal({
   date, period, existingReservations, userReservation, blockInfo, role,
@@ -22,8 +20,7 @@ export default function ReservationModal({
   const [submitting, setSubmitting] = useState(false)
   const [blockReason, setBlockReason] = useState('')
 
-  const isPrinter = role === 'printer' || role === 'admin'
-  const isBlocked = !!blockInfo
+  const isPrinter = isPrinterRole(role)
 
   const handleBlock = async () => {
     setSubmitting(true)
@@ -58,7 +55,6 @@ export default function ReservationModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
           <div>
             <h2 className="font-semibold text-gray-900">
@@ -72,7 +68,6 @@ export default function ReservationModal({
         </div>
 
         <div className="p-5 space-y-4">
-          {/* Availability bar */}
           <div>
             <div className="flex justify-between text-sm mb-1.5">
               <span className={`flex items-center gap-1.5 ${remaining <= 0 ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
@@ -91,8 +86,7 @@ export default function ReservationModal({
             </div>
           </div>
 
-          {/* Blocked banner */}
-          {isBlocked && (
+          {blockInfo && (
             <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
               <Ban size={15} className="text-red-500 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
@@ -110,7 +104,6 @@ export default function ReservationModal({
             </div>
           )}
 
-          {/* Existing reservations */}
           {existingReservations.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t.currentReservations}</p>
@@ -180,8 +173,7 @@ export default function ReservationModal({
             </div>
           )}
 
-          {/* Reserve form — hidden when period is blocked */}
-          {!userReservation && remaining > 0 && !isBlocked && (
+          {!userReservation && remaining > 0 && !blockInfo && (
             <div className={existingReservations.length > 0 ? 'border-t border-gray-100 pt-4 space-y-3' : 'space-y-3'}>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t.reservePcs}</p>
               <div>
@@ -218,7 +210,6 @@ export default function ReservationModal({
             </div>
           )}
 
-          {/* Cancel own reservation (non-printer only) */}
           {userReservation && !isPrinter && (
             <div className="border-t border-gray-100 pt-4">
               <button
@@ -231,12 +222,11 @@ export default function ReservationModal({
             </div>
           )}
 
-          {remaining <= 0 && !userReservation && !isBlocked && (
+          {remaining <= 0 && !userReservation && !blockInfo && (
             <p className="text-sm text-red-500 text-center py-2 bg-red-50 rounded-lg">{t.reservationFull}</p>
           )}
 
-          {/* Block period — printer only, unblocked periods */}
-          {isPrinter && !isBlocked && (
+          {isPrinter && !blockInfo && (
             <div className="border-t border-gray-100 pt-4 space-y-2">
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t.blockPeriod}</p>
               <input

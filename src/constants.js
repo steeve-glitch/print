@@ -1,3 +1,7 @@
+export const TOTAL_PCS = 30
+
+export const isPrinterRole = (role) => role === 'printer' || role === 'admin'
+
 export const PERIODS = [
   { id: 'tutoria', label: 'Tutoria',  time: '8:15 – 8:30'   },
   { id: '1',       label: 'Period 1', time: '8:30 – 9:10'   },

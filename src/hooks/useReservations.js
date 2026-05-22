@@ -19,9 +19,18 @@ export function useReservations(user, role) {
           headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` },
         }),
       ])
+      if (!resRes.ok || !blockRes.ok) throw new Error('Fetch failed')
       const [resData, blockData] = await Promise.all([resRes.json(), blockRes.json()])
-      setReservations(Array.isArray(resData) ? resData : [])
-      setBlockedPeriods(Array.isArray(blockData) ? blockData : [])
+      const nextRes = Array.isArray(resData) ? resData : []
+      const nextBlocked = Array.isArray(blockData) ? blockData : []
+      setReservations(prev => {
+        const nextStr = JSON.stringify(nextRes)
+        return JSON.stringify(prev) === nextStr ? prev : nextRes
+      })
+      setBlockedPeriods(prev => {
+        const nextStr = JSON.stringify(nextBlocked)
+        return JSON.stringify(prev) === nextStr ? prev : nextBlocked
+      })
     } catch (err) {
       console.error('Error fetching reservation data:', err)
     } finally {
