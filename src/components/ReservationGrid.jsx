@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Monitor, Loader } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Monitor, Loader, Ban } from 'lucide-react'
 import { PERIODS } from '../constants'
 import { useReservations } from '../hooks/useReservations'
 import { useToast } from './Toast'
@@ -38,8 +38,14 @@ export default function ReservationGrid({ user, userName, role, department }) {
   const weekDates = getWeekDates(weekAnchor)
   const [modalInfo, setModalInfo] = useState(null)
 
-  const { reservations, loading, fetchReservations, createReservation, deleteReservation, patchReservation } =
-    useReservations(user, role)
+  const {
+    reservations, blockedPeriods, loading,
+    fetchReservations, createReservation, deleteReservation, patchReservation,
+    blockPeriod, unblockPeriod,
+  } = useReservations(user, role)
+
+  const isPrinter = role === 'printer' || role === 'admin'
+  const getBlock = (date, periodId) => blockedPeriods.find(b => b.date === date && b.period === periodId)
 
   const refresh = useCallback(() => {
     fetchReservations(weekDates[0], weekDates[4])
@@ -105,6 +111,28 @@ export default function ReservationGrid({ user, userName, role, department }) {
     } catch (err) {
       showToast(err.message || t.toastError, 'error')
       throw err
+    }
+  }
+
+  const handleBlock = async ({ reason }) => {
+    try {
+      await blockPeriod({ date: modalInfo.date, period: modalInfo.period, reason })
+      refresh()
+      setModalInfo(null)
+      showToast(t.toastBlocked)
+    } catch {
+      showToast(t.toastError, 'error')
+    }
+  }
+
+  const handleUnblock = async (id) => {
+    try {
+      await unblockPeriod(id)
+      refresh()
+      setModalInfo(null)
+      showToast(t.toastUnblocked)
+    } catch {
+      showToast(t.toastError, 'error')
     }
   }
 
@@ -174,25 +202,39 @@ export default function ReservationGrid({ user, userName, role, department }) {
                   {weekDates.map((date) => {
                     const total = cellTotal(date, period.id)
                     const cells = cellReservations(date, period.id)
-                    const userRes = userReservation(date, period.id)
                     const fillPct = (total / TOTAL_PCS) * 100
                     const isPast = date < today
+                    const block = getBlock(date, period.id)
+                    const isBlocked = !!block
+                    const canClick = !isPast && (isPrinter || !isBlocked)
 
                     return (
                       <td
                         key={date}
-                        onClick={() => !isPast && setModalInfo({ date, period: period.id })}
+                        onClick={() => canClick && setModalInfo({ date, period: period.id })}
                         className={`px-2 py-2 border-r last:border-r-0 border-gray-200 transition-colors align-top ${
                           pi < PERIODS.length - 1 ? 'border-b' : ''
                         } ${
                           isPast
                             ? 'bg-gray-50/60 opacity-60 cursor-default'
+                            : isBlocked
+                            ? isPrinter
+                              ? 'bg-red-50 cursor-pointer hover:bg-red-100'
+                              : 'bg-red-50 cursor-not-allowed'
                             : date === today
                             ? 'bg-blue-50/20 cursor-pointer hover:bg-blue-50'
                             : 'bg-white cursor-pointer hover:bg-gray-50'
                         }`}
                       >
-                        {total > 0 ? (
+                        {isBlocked ? (
+                          <div className="flex flex-col items-center justify-center min-h-[40px] gap-0.5">
+                            <Ban size={13} className="text-red-300" />
+                            <span className="text-[10px] text-red-400 font-medium">{t.blockedLabel}</span>
+                            {block.reason ? (
+                              <span className="text-[10px] text-red-300 truncate max-w-full px-1 text-center leading-tight">{block.reason}</span>
+                            ) : null}
+                          </div>
+                        ) : total > 0 ? (
                           <div className="space-y-1 min-h-[40px]">
                             <div className="flex items-center gap-1">
                               <div className="flex-1 bg-gray-100 rounded-full h-1">
@@ -239,10 +281,13 @@ export default function ReservationGrid({ user, userName, role, department }) {
           period={modalInfo.period}
           existingReservations={cellReservations(modalInfo.date, modalInfo.period)}
           userReservation={userReservation(modalInfo.date, modalInfo.period)}
+          blockInfo={getBlock(modalInfo.date, modalInfo.period)}
           role={role}
           onReserve={handleReserve}
           onDelete={handleDelete}
           onPatch={handlePatch}
+          onBlock={handleBlock}
+          onUnblock={handleUnblock}
           onClose={() => setModalInfo(null)}
         />
       )}

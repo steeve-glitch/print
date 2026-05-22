@@ -9,6 +9,15 @@ CREATE TABLE IF NOT EXISTS users (
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Blocked Periods Table
+CREATE TABLE IF NOT EXISTS blocked_periods (
+    id TEXT PRIMARY KEY,
+    date TEXT NOT NULL,
+    period TEXT NOT NULL,
+    reason TEXT DEFAULT '',
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Reservations Table
 CREATE TABLE IF NOT EXISTS reservations (
     id TEXT PRIMARY KEY,

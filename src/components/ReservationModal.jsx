@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { X, Monitor, Pencil, Trash2 } from 'lucide-react'
+import { X, Monitor, Pencil, Trash2, Ban } from 'lucide-react'
 import { PERIODS } from '../constants'
 import { useT } from '../i18n'
 
 const TOTAL_PCS = 30
 
 export default function ReservationModal({
-  date, period, existingReservations, userReservation, role,
-  onReserve, onDelete, onPatch, onClose,
+  date, period, existingReservations, userReservation, blockInfo, role,
+  onReserve, onDelete, onPatch, onBlock, onUnblock, onClose,
 }) {
   const { t } = useT()
   const periodInfo = PERIODS.find(p => p.id === period)
@@ -20,8 +20,16 @@ export default function ReservationModal({
   const [editCount, setEditCount] = useState(1)
   const [editNotes, setEditNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [blockReason, setBlockReason] = useState('')
 
   const isPrinter = role === 'printer' || role === 'admin'
+  const isBlocked = !!blockInfo
+
+  const handleBlock = async () => {
+    setSubmitting(true)
+    try { await onBlock({ reason: blockReason }) }
+    finally { setSubmitting(false) }
+  }
 
   const handleReserve = async () => {
     setSubmitting(true)
@@ -82,6 +90,25 @@ export default function ReservationModal({
               />
             </div>
           </div>
+
+          {/* Blocked banner */}
+          {isBlocked && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+              <Ban size={15} className="text-red-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-red-700">{t.periodBlockedMsg}</p>
+                {blockInfo.reason ? <p className="text-xs text-red-500 mt-0.5">{blockInfo.reason}</p> : null}
+              </div>
+              {isPrinter && (
+                <button
+                  onClick={() => onUnblock(blockInfo.id)}
+                  className="text-xs bg-white border border-red-200 text-red-600 hover:bg-red-100 px-2.5 py-1 rounded font-medium shrink-0 transition-colors"
+                >
+                  {t.unblockPeriod}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Existing reservations */}
           {existingReservations.length > 0 && (
@@ -153,8 +180,8 @@ export default function ReservationModal({
             </div>
           )}
 
-          {/* Reserve form — shown to anyone without an existing reservation when capacity remains */}
-          {!userReservation && remaining > 0 && (
+          {/* Reserve form — hidden when period is blocked */}
+          {!userReservation && remaining > 0 && !isBlocked && (
             <div className={existingReservations.length > 0 ? 'border-t border-gray-100 pt-4 space-y-3' : 'space-y-3'}>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t.reservePcs}</p>
               <div>
@@ -204,8 +231,30 @@ export default function ReservationModal({
             </div>
           )}
 
-          {remaining <= 0 && !userReservation && (
+          {remaining <= 0 && !userReservation && !isBlocked && (
             <p className="text-sm text-red-500 text-center py-2 bg-red-50 rounded-lg">{t.reservationFull}</p>
+          )}
+
+          {/* Block period — printer only, unblocked periods */}
+          {isPrinter && !isBlocked && (
+            <div className="border-t border-gray-100 pt-4 space-y-2">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{t.blockPeriod}</p>
+              <input
+                type="text"
+                value={blockReason}
+                onChange={e => setBlockReason(e.target.value)}
+                placeholder={t.blockReasonPlaceholder}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200"
+              />
+              <button
+                onClick={handleBlock}
+                disabled={submitting}
+                className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-medium py-2.5 rounded-lg transition-colors text-sm disabled:opacity-50"
+              >
+                <Ban size={14} />
+                {t.blockPeriod}
+              </button>
+            </div>
           )}
         </div>
       </div>

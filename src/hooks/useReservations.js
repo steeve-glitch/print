@@ -5,18 +5,25 @@ const AUTH_TOKEN = import.meta.env.VITE_WORKER_AUTH_TOKEN
 
 export function useReservations(user, role) {
   const [reservations, setReservations] = useState([])
+  const [blockedPeriods, setBlockedPeriods] = useState([])
   const [loading, setLoading] = useState(true)
 
   const fetchReservations = useCallback(async (from, to) => {
     if (!user?.uid) return
     try {
-      const response = await fetch(`${WORKER_URL}/api/reservations?from=${from}&to=${to}`, {
-        headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` },
-      })
-      const data = await response.json()
-      setReservations(Array.isArray(data) ? data : [])
+      const [resRes, blockRes] = await Promise.all([
+        fetch(`${WORKER_URL}/api/reservations?from=${from}&to=${to}`, {
+          headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` },
+        }),
+        fetch(`${WORKER_URL}/api/blocked-periods?from=${from}&to=${to}`, {
+          headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` },
+        }),
+      ])
+      const [resData, blockData] = await Promise.all([resRes.json(), blockRes.json()])
+      setReservations(Array.isArray(resData) ? resData : [])
+      setBlockedPeriods(Array.isArray(blockData) ? blockData : [])
     } catch (err) {
-      console.error('Error fetching reservations:', err)
+      console.error('Error fetching reservation data:', err)
     } finally {
       setLoading(false)
     }
@@ -66,5 +73,35 @@ export function useReservations(user, role) {
     }
   }
 
-  return { reservations, loading, fetchReservations, createReservation, deleteReservation, patchReservation }
+  const blockPeriod = async ({ date, period, reason }) => {
+    const response = await fetch(`${WORKER_URL}/api/blocked-periods`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${AUTH_TOKEN}`,
+        'Content-Type': 'application/json',
+        'X-User-Role': role,
+      },
+      body: JSON.stringify({ date, period, reason: reason || '' }),
+    })
+    if (!response.ok) throw new Error('Failed to block period')
+    return response.json()
+  }
+
+  const unblockPeriod = async (id) => {
+    const response = await fetch(`${WORKER_URL}/api/blocked-periods/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${AUTH_TOKEN}`,
+        'X-User-Role': role,
+      },
+    })
+    if (!response.ok) throw new Error('Failed to unblock period')
+  }
+
+  return {
+    reservations, blockedPeriods, loading,
+    fetchReservations,
+    createReservation, deleteReservation, patchReservation,
+    blockPeriod, unblockPeriod,
+  }
 }

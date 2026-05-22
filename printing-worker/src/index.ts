@@ -208,6 +208,41 @@ export default {
 				return Response.json({ success: true }, { headers: corsHeaders });
 			}
 
+			// --- BLOCKED PERIODS API ---
+			if (path === '/api/blocked-periods' && method === 'GET') {
+				const from = url.searchParams.get('from');
+				const to = url.searchParams.get('to');
+				if (!from || !to) return new Response('from and to required', { status: 400, headers: corsHeaders });
+				const { results } = await env.DB.prepare(
+					'SELECT * FROM blocked_periods WHERE date >= ? AND date <= ? ORDER BY date ASC'
+				).bind(from, to).all();
+				return Response.json(results, { headers: corsHeaders });
+			}
+
+			if (path === '/api/blocked-periods' && method === 'POST') {
+				const userRole = request.headers.get('X-User-Role');
+				if (userRole !== 'printer' && userRole !== 'admin') {
+					return new Response('Forbidden', { status: 403, headers: corsHeaders });
+				}
+				const data = await request.json() as any;
+				const { date, period, reason } = data;
+				const id = crypto.randomUUID();
+				await env.DB.prepare(
+					'INSERT INTO blocked_periods (id, date, period, reason) VALUES (?, ?, ?, ?)'
+				).bind(id, date, period, reason || '').run();
+				return Response.json({ id }, { status: 201, headers: corsHeaders });
+			}
+
+			if (path.startsWith('/api/blocked-periods/') && method === 'DELETE') {
+				const userRole = request.headers.get('X-User-Role');
+				if (userRole !== 'printer' && userRole !== 'admin') {
+					return new Response('Forbidden', { status: 403, headers: corsHeaders });
+				}
+				const id = path.split('/').pop();
+				await env.DB.prepare('DELETE FROM blocked_periods WHERE id = ?').bind(id).run();
+				return Response.json({ success: true }, { headers: corsHeaders });
+			}
+
 			// --- EMAIL API ---
 			if (path === '/api/send-email' && method === 'POST') {
 				const { to, subject, html } = await request.json() as any;
